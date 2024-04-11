@@ -1,0 +1,36 @@
+name: Upload Contribution Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 0 * * *'
+      
+jobs:
+  upload_status:
+    steps:
+      - uses: actions/setup-python@v3
+      - name: Checkout main branch
+        uses: actions/checkout@v2
+        with:
+          ref: main
+          fetch-depth: 0 # set to zero to fetch entire history 9github defaults to just the last commit
+      
+      - name: get commits
+        env:
+          DUNE_API_KEY_PROD: ${{ secrets.DUNE_API_KEY_PROD }}
+        run: "git log --pretty=format:%h,%at,%an > go-ethereum-git.csv"
+
+      - name: Upload translation status CSV to Dune
+        env:
+          DUNE_API_KEY_PROD: ${{ secrets.DUNE_API_KEY_PROD }}
+        run: |
+        curl --request POST \
+            --url https://api.dune.com/api/v1/table/upload/csv \
+            --header 'Content-Type: application/json' \
+            --header 'X-DUNE-API-KEY: $DUNE_API_KEY_PROD \
+            --data '{
+            "data": {{cat go-ethereum-git.csv}}
+            "description": "",
+            "table_name": "go-eth-git",
+            "is_private": false
+          }'
